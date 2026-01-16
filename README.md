@@ -22,11 +22,28 @@
     ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-[![Lint](https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml/badge.svg)](https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="https://www.beeper.com/changelog/desktop">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/robertogogoni/update-beeper/master/.github/badges/beeper-version.json&style=for-the-badge" alt="Beeper Latest">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://aur.archlinux.org/packages/beeper-v4-bin">
+    <img src="https://img.shields.io/aur/version/beeper-v4-bin?label=AUR&style=for-the-badge&color=1793d1" alt="AUR Version">
+  </a>
+</p>
 
-[![Beeper Latest](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/robertogogoni/update-beeper/master/.github/badges/beeper-version.json)](https://www.beeper.com/changelog/desktop)
-[![AUR Version](https://img.shields.io/aur/version/beeper-v4-bin?label=AUR)](https://aur.archlinux.org/packages/beeper-v4-bin)
+<p align="center">
+  <i>Is AUR behind? This script gets you the latest directly from Beeper!</i>
+</p>
+
+<p align="center">
+  <a href="https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml">
+    <img src="https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml/badge.svg" alt="Lint">
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+  </a>
+</p>
 
 A self-healing Beeper Desktop updater for Linux, built specifically for Arch Linux users.
 
