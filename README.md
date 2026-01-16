@@ -25,6 +25,9 @@
 [![Lint](https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml/badge.svg)](https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+[![Beeper Latest](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/robertogogoni/update-beeper/master/.github/badges/beeper-version.json)](https://www.beeper.com/changelog/desktop)
+[![AUR Version](https://img.shields.io/aur/version/beeper-v4-bin?label=AUR)](https://aur.archlinux.org/packages/beeper-v4-bin)
+
 A self-healing Beeper Desktop updater for Linux, built specifically for Arch Linux users.
 
 ## Why This Exists
