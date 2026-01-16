@@ -1,0 +1,103 @@
+#!/bin/bash
+# beeper-version - Quick version status for Beeper Desktop
+# Shows installed version, latest available, and AUR package status
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+BEEPER_API="https://api.beeper.com/desktop/download/linux/x64/stable/com.automattic.beeper.desktop"
+INSTALL_DIR="/opt/beeper"
+
+# Get installed version
+get_installed_version() {
+    local version=""
+
+    # Try package.json first (most accurate)
+    if [[ -f "$INSTALL_DIR/resources/app/package.json" ]]; then
+        version=$(grep -oP '"version":\s*"\K[0-9]+\.[0-9]+\.[0-9]+' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null | head -1)
+    fi
+
+    # Fallback to pacman
+    if [[ -z "$version" ]]; then
+        version=$(pacman -Q beeper-v4-bin 2>/dev/null | awk '{print $2}' | cut -d'-' -f1)
+    fi
+
+    echo "${version:-not installed}"
+}
+
+# Get latest version from Beeper API
+get_latest_version() {
+    local download_url
+    download_url=$(curl -Ls -o /dev/null -w "%{url_effective}" "$BEEPER_API" 2>/dev/null)
+    echo "$download_url" | grep -oP 'Beeper-\K[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
+}
+
+# Get AUR version
+get_aur_version() {
+    curl -sL "https://aur.archlinux.org/packages/beeper-v4-bin" 2>/dev/null | \
+        grep -oP '4\.\d+\.\d+' | head -1 || echo "unknown"
+}
+
+# Version comparison: returns 0 if $1 >= $2
+version_gte() {
+    printf '%s\n%s\n' "$2" "$1" | sort -V -C
+}
+
+# Main
+echo ""
+echo -e "${BOLD}${CYAN}🐝 Beeper Version Status${NC}"
+echo -e "${DIM}─────────────────────────────────────${NC}"
+echo ""
+
+# Fetch all versions (show loading for each)
+echo -ne "${DIM}Checking installed...${NC}\r"
+INSTALLED=$(get_installed_version)
+
+echo -ne "${DIM}Checking latest...   ${NC}\r"
+LATEST=$(get_latest_version)
+
+echo -ne "${DIM}Checking AUR...      ${NC}\r"
+AUR=$(get_aur_version)
+
+# Clear the loading line
+echo -ne "                           \r"
+
+# Display versions with status indicators
+echo -e "  ${BOLD}Installed:${NC}  $INSTALLED"
+echo -e "  ${BOLD}Latest:${NC}     $LATEST"
+echo -e "  ${BOLD}AUR:${NC}        $AUR"
+echo ""
+
+# Analysis
+if [[ "$INSTALLED" == "not installed" ]]; then
+    echo -e "${RED}  ✗ Beeper is not installed${NC}"
+    echo -e "${DIM}    Run: update-beeper${NC}"
+elif [[ "$LATEST" == "unknown" ]]; then
+    echo -e "${YELLOW}  ⚠ Could not check latest version (network issue?)${NC}"
+elif version_gte "$INSTALLED" "$LATEST"; then
+    echo -e "${GREEN}  ✓ You're on the latest version!${NC}"
+else
+    echo -e "${YELLOW}  ⬆ Update available: $INSTALLED → $LATEST${NC}"
+    echo -e "${DIM}    Run: update-beeper${NC}"
+fi
+
+# AUR status
+if [[ "$AUR" != "unknown" ]] && [[ "$LATEST" != "unknown" ]]; then
+    if version_gte "$AUR" "$LATEST"; then
+        echo -e "${GREEN}  ✓ AUR is up to date${NC}"
+    else
+        BEHIND=$((${LATEST##*.} - ${AUR##*.}))
+        echo -e "${DIM}  ℹ AUR is behind by ~$BEHIND releases${NC}"
+    fi
+fi
+
+echo ""

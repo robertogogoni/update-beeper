@@ -1,0 +1,40 @@
+name: Lint
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          severity: warning
+        env:
+          SHELLCHECK_OPTS: -e SC2034 -e SC1091
+
+  syntax-check:
+    name: Bash Syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check bash syntax
+        run: |
+          for script in update-beeper beeper-version; do
+            echo "Checking $script..."
+            bash -n "$script"
+          done
+          echo "✓ All scripts have valid syntax"

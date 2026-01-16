@@ -22,6 +22,9 @@
     ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
+[![Lint](https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml/badge.svg)](https://github.com/robertogogoni/update-beeper/actions/workflows/lint.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A self-healing Beeper Desktop updater for Linux, built specifically for Arch Linux users.
 
 ## Why This Exists
@@ -95,32 +98,70 @@ Beeper crashed on startup. No warning during install. No automatic recovery. Thi
   │  🏥 HEALTH CHECKS     Verifies Beeper runs stable (10s)        │
   │  🛫 PRE-FLIGHT        Validates permissions, space, network    │
   │  📦 AUR AWARE         Tells you when AUR catches up            │
+  │  📊 VERSION STATUS    Quick check with beeper-version          │
+  │  ⏰ AUTO UPDATES      Systemd timer for set-and-forget         │
   └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
 
-```bash
-# One-liner install
-curl -o ~/.local/bin/update-beeper \
-  https://raw.githubusercontent.com/robertogogoni/update-beeper/main/update-beeper \
-  && chmod +x ~/.local/bin/update-beeper
+### Quick Install (Recommended)
 
-# Or clone the repo
+```bash
+curl -fsSL https://raw.githubusercontent.com/robertogogoni/update-beeper/main/install.sh | bash
+```
+
+### Manual Install
+
+```bash
+# Download scripts
+curl -o ~/.local/bin/update-beeper \
+  https://raw.githubusercontent.com/robertogogoni/update-beeper/main/update-beeper
+curl -o ~/.local/bin/beeper-version \
+  https://raw.githubusercontent.com/robertogogoni/update-beeper/main/beeper-version
+
+# Make executable
+chmod +x ~/.local/bin/update-beeper ~/.local/bin/beeper-version
+```
+
+### Clone & Install
+
+```bash
 git clone https://github.com/robertogogoni/update-beeper.git
-cp update-beeper/update-beeper ~/.local/bin/
+cd update-beeper
+./install.sh
 ```
 
 Make sure `~/.local/bin` is in your PATH.
 
 ## Usage
 
+### Check Version Status
+
+```bash
+beeper-version
+```
+
+```
+🐝 Beeper Version Status
+─────────────────────────────────────
+
+  Installed:  4.2.482
+  Latest:     4.2.482
+  AUR:        4.2.455
+
+  ✓ You're on the latest version!
+  ℹ AUR is behind by ~27 releases
+```
+
+### Update Beeper
+
 ```bash
 update-beeper              # Check and install updates
 update-beeper --check      # Check only, don't install
 update-beeper --changelog  # Open changelog for installed version
 update-beeper --force      # Force reinstall even if up to date
-update-beeper --notify     # Send desktop notification (for cron/timers)
+update-beeper --notify     # Send desktop notification (for automation)
 ```
 
 ### Options
@@ -132,6 +173,28 @@ update-beeper --notify     # Send desktop notification (for cron/timers)
 | `--notify` | `-n` | Send desktop notification (for cron/timer use) |
 | `--force` | `-f` | Force update even if already on latest |
 | `--help` | `-h` | Show help message |
+
+## Automatic Updates (Systemd)
+
+Set up automatic daily update checks with desktop notifications:
+
+```bash
+# Copy systemd user files
+mkdir -p ~/.config/systemd/user
+curl -fsSL https://raw.githubusercontent.com/robertogogoni/update-beeper/main/systemd/update-beeper-user.service \
+  -o ~/.config/systemd/user/update-beeper.service
+curl -fsSL https://raw.githubusercontent.com/robertogogoni/update-beeper/main/systemd/update-beeper-user.timer \
+  -o ~/.config/systemd/user/update-beeper.timer
+
+# Enable the timer
+systemctl --user daemon-reload
+systemctl --user enable --now update-beeper.timer
+
+# Check timer status
+systemctl --user list-timers update-beeper.timer
+```
+
+The timer runs daily between 10:00-14:00 (randomized to avoid hammering Beeper's servers).
 
 ## Self-Healing Pipeline
 
@@ -214,9 +277,21 @@ Yes! This script works alongside the AUR package. When AUR catches up, you can r
 
 The script automatically rolls back to your previous working version. You'll get a notification and can try again later or report the issue.
 
-**Q: Can I automate this with a systemd timer?**
+**Q: Can I automate this?**
 
-Yes! Use `update-beeper --notify` in your timer to get desktop notifications about update status.
+Yes! See the [Automatic Updates](#automatic-updates-systemd) section for systemd timer setup.
+
+**Q: How do I check my current version status?**
+
+Run `beeper-version` for a quick overview of installed, latest, and AUR versions.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## License
 
