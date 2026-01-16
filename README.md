@@ -253,10 +253,26 @@ These files are checked after every extraction—if any are missing, the update 
 
 ## Requirements
 
-- Arch Linux (or Arch-based distros)
-- `curl`, `sudo`
-- `notify-send` (optional, for notifications)
-- Beeper Desktop (from AUR or manual install in `/opt/beeper`)
+| Requirement | Notes |
+|-------------|-------|
+| **Architecture** | x86_64 only (Beeper doesn't provide ARM builds) |
+| **Distro** | Arch Linux or Arch-based (Manjaro, EndeavourOS, etc.) |
+| **curl** | Required - for downloading |
+| **sudo** | Required - for installing to /opt |
+| **notify-send** | Optional - for desktop notifications |
+
+### Compatibility Checks
+
+The script automatically verifies your system before running:
+
+```
+✓ Architecture check (x86_64 required)
+✓ Distro detection (warns if not Arch-based)
+✓ Dependency check (curl, sudo)
+✓ Optional: notify-send for notifications
+```
+
+If any required check fails, you'll get a clear error message with instructions.
 
 ## File Locations
 
@@ -284,6 +300,17 @@ Yes! See the [Automatic Updates](#automatic-updates-systemd) section for systemd
 **Q: How do I check my current version status?**
 
 Run `beeper-version` for a quick overview of installed, latest, and AUR versions.
+
+**Q: Does this work on other distros (Ubuntu, Fedora, etc.)?**
+
+Partially. The core update functionality (download, extract, install) works on any Linux distro with x86_64 architecture. However:
+- AUR version checking won't work (requires pacman)
+- You'll see a warning about non-Arch distro
+- The script still installs to `/opt/beeper`
+
+**Q: Why x86_64 only?**
+
+Beeper Desktop only provides x86_64 (64-bit Intel/AMD) builds. There are no ARM or 32-bit versions available from Beeper.
 
 ## Contributing
 
