@@ -1,53 +1,101 @@
 # update-beeper
 
 ```
-                 ╭──────────────────────────────────────────╮
-                 │                                          │
-    ┌──────┐     │   ██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗   │
-    │ ▓▓▓▓ │     │   ██║   ██║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝   │
-    │ ▓▓▓▓ │ ──► │   ██║   ██║██████╔╝██║  ██║███████║   ██║   █████╗     │
-    │ ▓▓▓▓ │     │   ██║   ██║██╔═══╝ ██║  ██║██╔══██║   ██║   ██╔══╝     │
-    └──────┘     │   ╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗   │
-    Beeper       │    ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝   │
-    AppImage     │                                                        │
-                 │           🐝  BEEPER DESKTOP UPDATER  🐝               │
-                 │          Self-healing • Auto-rollback                  │
-                 ╰──────────────────────────────────────────╯
+    ╔══════════════════════════════════════════════════════════════════════════╗
+    ║                                                                          ║
+    ║   ██████╗ ███████╗███████╗██████╗ ███████╗██████╗                        ║
+    ║   ██╔══██╗██╔════╝██╔════╝██╔══██╗██╔════╝██╔══██╗                       ║
+    ║   ██████╔╝█████╗  █████╗  ██████╔╝█████╗  ██████╔╝                       ║
+    ║   ██╔══██╗██╔══╝  ██╔══╝  ██╔═══╝ ██╔══╝  ██╔══██╗                       ║
+    ║   ██████╔╝███████╗███████╗██║     ███████╗██║  ██║                       ║
+    ║   ╚═════╝ ╚══════╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝                       ║
+    ║                                                                          ║
+    ║   ██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗██████╗              ║
+    ║   ██║   ██║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██╔══██╗             ║
+    ║   ██║   ██║██████╔╝██║  ██║███████║   ██║   █████╗  ██████╔╝             ║
+    ║   ██║   ██║██╔═══╝ ██║  ██║██╔══██║   ██║   ██╔══╝  ██╔══██╗             ║
+    ║   ╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗██║  ██║             ║
+    ║    ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝             ║
+    ║                                                                          ║
+    ║                🐝  Self-healing • Auto-rollback • Arch Linux  🐝         ║
+    ║                                                                          ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-A self-healing Beeper Desktop updater for Linux (Arch-focused).
+A self-healing Beeper Desktop updater for Linux, built specifically for Arch Linux users.
 
 ## Why This Exists
 
-> *"The update broke everything. Beeper wouldn't start. I had to manually restore from backup."*
+### The Problem: Beeper's Built-in Updater Doesn't Work on Arch
 
-This script was born from a real failure. During a routine Beeper update, the AppImage extraction silently failed—critical V8 snapshot files were missing. The result?
+If you've installed Beeper from the AUR (`beeper-v4-bin`), you've probably noticed that clicking **"Update Available"** inside Beeper does... nothing. The app downloads the update, prompts you to restart, and then you're still on the old version.
+
+**Why?** Beeper's built-in updater is designed for standalone AppImage installations where it can replace itself. But on Arch Linux, Beeper is managed by pacman/yay through the AUR package. The app can't overwrite files that pacman owns—so the update silently fails, leaving you stuck on the old version with no error message.
+
+### The Problem: AUR Is Always Behind
+
+Even if you run `yay -Syu beeper-v4-bin`, you're often still behind. The AUR package depends on a maintainer to notice a new release, update the `PKGBUILD`, and push it. This can take hours or even days. Meanwhile, Beeper has already released a newer version that you can't get.
+
+**This script solves both problems:**
+- ✅ Downloads directly from Beeper's API (always the latest)
+- ✅ Installs immediately without waiting for AUR
+- ✅ Tells you when AUR catches up so you can resync
+
+### Bonus: Self-Healing After a Real Failure
+
+During development, a routine update broke everything—the AppImage extraction silently failed, leaving critical V8 snapshot files missing:
 
 ```
 FATAL:gin/v8_initializer.cc:705] Error loading V8 startup snapshot file
 ```
 
-Beeper crashed on startup. No warning during install. No automatic recovery. Just a broken app and a scramble to restore the backup manually.
+Beeper crashed on startup. No warning during install. No automatic recovery. This script now verifies every critical file and automatically rolls back if anything goes wrong.
 
-**Never again.**
+## How Beeper Updates Work (And Why They Break)
 
-This updater now:
-- ✅ Verifies every critical file exists after extraction
-- ✅ Tests that Beeper actually starts and stays running
-- ✅ Automatically rolls back if anything goes wrong
-- ✅ Keeps the last 3 working versions as backups
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    BEEPER'S BUILT-IN UPDATE (Broken on Arch)                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   1. Beeper detects new version via API                                     │
+│   2. Downloads update in background                                         │
+│   3. Prompts: "Restart to update"                                           │
+│   4. User restarts...                                                       │
+│   5. ❌ Update fails silently (pacman owns the files)                       │
+│   6. User is still on old version, confused                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    THIS SCRIPT (Works on Arch)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   1. Queries Beeper API for latest version                                  │
+│   2. Compares against installed version                                     │
+│   3. Downloads AppImage directly from Beeper                                │
+│   4. Extracts and verifies all critical files                               │
+│   5. Backs up current installation                                          │
+│   6. Installs with proper permissions (sudo)                                │
+│   7. Verifies Beeper starts and runs stable                                 │
+│   8. ✅ You're on the latest version!                                       │
+│                                                                             │
+│   If anything fails → automatic rollback to backup                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Features
 
 ```
-  ┌─────────────────────────────────────────────────────────────┐
-  │  🔄 SELF-HEALING     Retries with targeted fixes            │
-  │  ⏪ AUTO-ROLLBACK    Restores previous version on failure   │
-  │  🏥 HEALTH CHECKS    Verifies Beeper runs stable (10s)      │
-  │  🛫 PRE-FLIGHT       Validates permissions, space, network  │
-  │  🔍 SMART DETECT     Compares installed vs Beeper API       │
-  │  📦 AUR AWARE        Notes when AUR lags behind releases    │
-  └─────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  🚀 DIRECT DOWNLOAD   Gets latest from Beeper API, skip AUR    │
+  │  🔄 SELF-HEALING      Retries with targeted fixes              │
+  │  ⏪ AUTO-ROLLBACK     Restores previous version on failure     │
+  │  🏥 HEALTH CHECKS     Verifies Beeper runs stable (10s)        │
+  │  🛫 PRE-FLIGHT        Validates permissions, space, network    │
+  │  📦 AUR AWARE         Tells you when AUR catches up            │
+  └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
@@ -85,7 +133,7 @@ update-beeper --notify     # Send desktop notification (for cron/timers)
 | `--force` | `-f` | Force update even if already on latest |
 | `--help` | `-h` | Show help message |
 
-## How It Works
+## Self-Healing Pipeline
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -142,10 +190,10 @@ These files are checked after every extraction—if any are missing, the update 
 
 ## Requirements
 
-- Linux (tested on Arch)
+- Arch Linux (or Arch-based distros)
 - `curl`, `sudo`
 - `notify-send` (optional, for notifications)
-- Beeper Desktop installed in `/opt/beeper`
+- Beeper Desktop (from AUR or manual install in `/opt/beeper`)
 
 ## File Locations
 
@@ -156,6 +204,20 @@ These files are checked after every extraction—if any are missing, the update 
 /tmp/beeper-update/       ← Temporary download/extract dir
 ```
 
+## FAQ
+
+**Q: Should I still use the AUR package?**
+
+Yes! This script works alongside the AUR package. When AUR catches up, you can run `yay -Syu beeper-v4-bin` to resync. The script will tell you when this happens.
+
+**Q: What if an update breaks something?**
+
+The script automatically rolls back to your previous working version. You'll get a notification and can try again later or report the issue.
+
+**Q: Can I automate this with a systemd timer?**
+
+Yes! Use `update-beeper --notify` in your timer to get desktop notifications about update status.
+
 ## License
 
 MIT
@@ -163,5 +225,5 @@ MIT
 ---
 
 <p align="center">
-  <i>Built after one too many broken updates</i> 🐝
+  <i>Because Beeper's "Update Available" button should actually work</i> 🐝
 </p>
