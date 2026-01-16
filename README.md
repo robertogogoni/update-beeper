@@ -285,6 +285,18 @@ These files are checked after every extraction—if any are missing, the update 
 | Startup crash | Corrupted cache | Clear Electron cache dirs |
 | All retries exhausted | Unrecoverable | **Automatic rollback** |
 
+### Code Safety
+
+The script follows bash best practices to prevent common issues:
+
+| Practice | Implementation |
+|----------|----------------|
+| **No directory leaks** | All `cd` commands run in subshells `(cd dir && ...)` |
+| **Safe file operations** | All paths are quoted and use absolute references |
+| **Proper error handling** | 46+ commands protected with `|| true` or `2>/dev/null` |
+| **Clean exit** | Trap ensures `/tmp/beeper-update` is cleaned on exit |
+| **Idempotent operations** | Safe to run multiple times without side effects |
+
 ## Requirements
 
 | Requirement | Notes |

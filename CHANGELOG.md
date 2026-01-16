@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Directory leak in `backup_current()`** - Now uses subshell to prevent working directory changes from affecting the main script
+- **Directory leak in extraction loop** - Extraction now runs in isolated subshell
+- **UX: "Configuring Wayland" message** - Only displays when actually on Wayland
 - Removed hardcoded username/UID from systemd service file
 - Scripts now work for any user without modification
 
