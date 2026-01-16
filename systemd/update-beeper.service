@@ -7,11 +7,17 @@ After=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/update-beeper --notify
-# Run as the user who owns the display for notifications
-# Edit this to match your username
-User=rob
+
+# IMPORTANT: Edit these values for your system:
+# - Change 'User' to your username
+# - Change '1000' in DBUS path to your UID (run 'id -u' to find it)
+User=%u
 Environment=DISPLAY=:0
-Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus
+
+# Note: For most users, the systemd USER service (update-beeper-user.service)
+# is recommended instead of this system service. It automatically uses
+# the correct user context without manual configuration.
 
 [Install]
 WantedBy=multi-user.target

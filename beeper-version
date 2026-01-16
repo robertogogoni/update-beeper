@@ -17,6 +17,18 @@ NC='\033[0m'
 BEEPER_API="https://api.beeper.com/desktop/download/linux/x64/stable/com.automattic.beeper.desktop"
 INSTALL_DIR="/opt/beeper"
 
+# Check dependencies
+if ! command -v curl &>/dev/null; then
+    echo -e "${RED}Error: curl is required but not installed${NC}"
+    exit 1
+fi
+
+# Check architecture
+ARCH=$(uname -m)
+if [[ "$ARCH" != "x86_64" ]]; then
+    echo -e "${YELLOW}Warning: Beeper only supports x86_64. Your arch: $ARCH${NC}"
+fi
+
 # Get installed version
 get_installed_version() {
     local version=""

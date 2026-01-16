@@ -72,6 +72,63 @@ cleanup() {
 trap cleanup EXIT
 
 #──────────────────────────────────────────────────────────────────────────────
+# SYSTEM COMPATIBILITY CHECKS
+#──────────────────────────────────────────────────────────────────────────────
+
+check_architecture() {
+    local arch
+    arch=$(uname -m)
+    if [[ "$arch" != "x86_64" ]]; then
+        echo -e "${RED}❌ Unsupported architecture: $arch${NC}"
+        echo -e "   Beeper Desktop only provides x86_64 (64-bit) builds."
+        echo -e "   Your system architecture: $arch"
+        exit 1
+    fi
+}
+
+check_distro() {
+    # Check if this is an Arch-based distro
+    if ! command -v pacman &>/dev/null; then
+        echo -e "${YELLOW}⚠ Warning: This script is designed for Arch Linux${NC}"
+        echo -e "   pacman not found - you may be on a different distro."
+        echo -e "   The script will still work, but AUR features won't be available."
+        echo ""
+    fi
+}
+
+check_dependencies() {
+    local missing=()
+
+    # Required dependencies
+    for cmd in curl sudo; do
+        if ! command -v "$cmd" &>/dev/null; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo -e "${RED}❌ Missing required dependencies: ${missing[*]}${NC}"
+        echo -e "   Install them with: sudo pacman -S ${missing[*]}"
+        exit 1
+    fi
+
+    # Optional dependencies (just warn)
+    if ! command -v notify-send &>/dev/null; then
+        if [[ "$NOTIFY" == true ]]; then
+            echo -e "${YELLOW}⚠ notify-send not found - notifications disabled${NC}"
+            echo -e "   Install with: sudo pacman -S libnotify"
+            NOTIFY=false
+        fi
+    fi
+}
+
+check_system_compatibility() {
+    check_architecture
+    check_distro
+    check_dependencies
+}
+
+#──────────────────────────────────────────────────────────────────────────────
 # UTILITY FUNCTIONS
 #──────────────────────────────────────────────────────────────────────────────
 
@@ -760,6 +817,9 @@ perform_update() {
 #──────────────────────────────────────────────────────────────────────────────
 # MAIN ENTRY POINT
 #──────────────────────────────────────────────────────────────────────────────
+
+# Verify system compatibility first
+check_system_compatibility
 
 # Handle changelog display (early exit)
 if [[ "$SHOW_CHANGELOG" == true ]]; then
