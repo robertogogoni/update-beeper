@@ -10,6 +10,10 @@ INSTALL_DIR="/opt/beeper"
 BACKUP_DIR="/opt/beeper-backups"
 TMP_DIR="/tmp/beeper-update"
 BEEPER_CONFIG="$HOME/.config/BeeperTexts"
+USER_DESKTOP_DIR="$HOME/.local/share/applications"
+
+# Wayland flags for native rendering (fixes blank windows on Hyprland/Sway)
+WAYLAND_FLAGS="--enable-features=UseOzonePlatform --ozone-platform=wayland"
 
 # Minimum expected AppImage size (Beeper is ~200MB)
 MIN_APPIMAGE_SIZE=150000000  # 150MB
@@ -51,6 +55,11 @@ usage() {
     echo ""
     echo "Beeper will automatically restart after updating."
     echo "If update fails, automatic rollback will restore the previous version."
+    echo ""
+    echo "Wayland Support:"
+    echo "  On Wayland (Hyprland, Sway, etc.), this script automatically:"
+    echo "  - Tests Beeper with native Wayland flags (fixes blank windows)"
+    echo "  - Creates ~/.local/share/applications/beeper.desktop override"
     exit 0
 }
 
@@ -415,8 +424,15 @@ verify_beeper_starts() {
     pkill beepertexts 2>/dev/null || true
     sleep 2
 
+    # Determine launch command - use Wayland flags if on Wayland
+    local launch_cmd="beeper"
+    if [[ -n "$WAYLAND_DISPLAY" ]]; then
+        launch_cmd="$INSTALL_DIR/beepertexts $WAYLAND_FLAGS"
+        echo -e "${BLUE}   Using Wayland-native rendering${NC}"
+    fi
+
     # Start fresh and capture PID
-    nohup beeper >/tmp/beeper-verify.log 2>&1 &
+    nohup $launch_cmd >/tmp/beeper-verify.log 2>&1 &
     local beeper_pid=$!
 
     # Check at intervals (catch early crashes + give time to stabilize)
@@ -534,9 +550,8 @@ backup_current() {
         echo "   Creating backup: $ROLLBACK_BACKUP"
         sudo cp -a "$INSTALL_DIR" "$BACKUP_DIR/$ROLLBACK_BACKUP"
 
-        # Keep only last 3 backups
-        cd "$BACKUP_DIR"
-        ls -t | tail -n +4 | xargs -r sudo rm -rf
+        # Keep only last 3 backups (subshell to avoid directory leak)
+        (cd "$BACKUP_DIR" && ls -t | tail -n +4 | xargs -r sudo rm -rf)
     fi
 }
 
@@ -658,6 +673,39 @@ install_files() {
     return 0
 }
 
+setup_wayland_desktop_override() {
+    # Only set up Wayland override if running on Wayland
+    if [[ -z "$WAYLAND_DISPLAY" ]]; then
+        return 0
+    fi
+
+    echo "   Setting up Wayland desktop override..."
+    mkdir -p "$USER_DESKTOP_DIR"
+
+    local system_desktop="/usr/share/applications/beeper.desktop"
+    local user_desktop="$USER_DESKTOP_DIR/beeper.desktop"
+
+    if [[ ! -f "$system_desktop" ]]; then
+        echo -e "${YELLOW}   ⚠ System desktop file not found, skipping Wayland override${NC}"
+        return 0
+    fi
+
+    # Copy system desktop file and add Wayland flags
+    cp "$system_desktop" "$user_desktop"
+
+    # Update the Exec line to include Wayland flags
+    # Match various possible Exec patterns and insert Wayland flags
+    sed -i "s|^Exec=beeper |Exec=beeper $WAYLAND_FLAGS |" "$user_desktop"
+    sed -i "s|^Exec=/opt/beeper/beepertexts |Exec=/opt/beeper/beepertexts $WAYLAND_FLAGS |" "$user_desktop"
+
+    # Update desktop database
+    update-desktop-database "$USER_DESKTOP_DIR" 2>/dev/null || true
+
+    echo -e "${GREEN}   ✓ Wayland desktop override configured${NC}"
+    echo -e "${BLUE}   → Beeper will use native Wayland rendering when launched from app menu${NC}"
+    return 0
+}
+
 #──────────────────────────────────────────────────────────────────────────────
 # MAIN UPDATE LOGIC WITH SELF-HEALING
 #──────────────────────────────────────────────────────────────────────────────
@@ -705,12 +753,11 @@ do_direct_install() {
             extraction_attempt=$((extraction_attempt + 1))
 
             echo -e "${BLUE}📦 Extracting... (attempt $extraction_attempt/$MAX_EXTRACTION_RETRIES)${NC}"
-            cd "$TMP_DIR"
             rm -rf "$extract_dir"
 
-            # Capture extraction output/errors
+            # Capture extraction output/errors (run in TMP_DIR via subshell)
             local extract_log="/tmp/beeper-extract-$$.log"
-            if ./"$appimage" --appimage-extract >"$extract_log" 2>&1; then
+            if (cd "$TMP_DIR" && ./"$appimage" --appimage-extract) >"$extract_log" 2>&1; then
                 if verify_extraction "$extract_dir"; then
                     rm -f "$extract_log"
                     extraction_success=true
@@ -760,6 +807,12 @@ do_direct_install() {
         echo -e "${RED}   Version verification failed${NC}"
         return 1
     fi
+
+    #── Step 7.5: Set up Wayland desktop override (if on Wayland) ────────────
+    if [[ -n "$WAYLAND_DISPLAY" ]]; then
+        echo -e "${BLUE}🖥️  Configuring Wayland support...${NC}"
+    fi
+    setup_wayland_desktop_override
 
     #── Step 8: Verify Beeper starts ──────────────────────────────────────────
     local startup_attempt=0
@@ -894,6 +947,9 @@ if version_gte "$AUR" "$LATEST"; then
     echo -e "${BLUE}📦 Updating via yay...${NC}"
     if yay -Syu --noconfirm beeper-v4-bin; then
         echo -e "${GREEN}✅ Updated to $LATEST via AUR!${NC}"
+
+        # Set up Wayland desktop override
+        setup_wayland_desktop_override
 
         # Verify startup - if it fails, try fixes before declaring success
         if verify_beeper_starts; then

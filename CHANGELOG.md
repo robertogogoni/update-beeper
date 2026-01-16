@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Wayland native rendering support** for Hyprland, Sway, and other Wayland compositors
+  - Automatically detects Wayland via `$WAYLAND_DISPLAY`
+  - Tests Beeper startup with Ozone platform flags (`--enable-features=UseOzonePlatform --ozone-platform=wayland`)
+  - Creates desktop file override at `~/.local/share/applications/beeper.desktop`
+  - Fixes blank/white window issues on Wayland without XWayland
+
 - **System compatibility checks** run automatically before updates
   - Architecture verification (x86_64 required)
   - Distro detection (warns if not Arch-based, still works)

@@ -100,6 +100,7 @@ Beeper crashed on startup. No warning during install. No automatic recovery. Thi
   │  📦 AUR AWARE         Tells you when AUR catches up            │
   │  📊 VERSION STATUS    Quick check with beeper-version          │
   │  ⏰ AUTO UPDATES      Systemd timer for set-and-forget         │
+  │  🖥️  WAYLAND NATIVE   Auto-configures for Hyprland/Sway/etc    │
   └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -195,6 +196,39 @@ systemctl --user list-timers update-beeper.timer
 ```
 
 The timer runs daily between 10:00-14:00 (randomized to avoid hammering Beeper's servers).
+
+## Wayland Support (Hyprland, Sway, etc.)
+
+Beeper uses Electron, which can have rendering issues on Wayland compositors. **Blank/white windows** are a common symptom when Electron tries to use XWayland instead of native Wayland rendering.
+
+### Automatic Configuration
+
+When running on Wayland (detected via `$WAYLAND_DISPLAY`), this script automatically:
+
+1. **Tests startup with Wayland flags** - Uses `--enable-features=UseOzonePlatform --ozone-platform=wayland`
+2. **Creates desktop file override** - Installs to `~/.local/share/applications/beeper.desktop`
+
+This ensures Beeper always launches with native Wayland rendering, fixing blank window issues.
+
+### Manual Fix (if needed)
+
+If you installed Beeper before this feature was added, run:
+
+```bash
+update-beeper --force
+```
+
+This will reinstall and configure Wayland support.
+
+### What Doesn't Work
+
+Beeper bundles its own Electron runtime, so these common approaches **don't work**:
+
+- `~/.config/electron-flags.conf` - Not read by bundled Electron
+- `~/.config/beepertexts-flags.conf` - Same reason
+- `ELECTRON_OZONE_PLATFORM_HINT` env var - Not respected
+
+The desktop file override is the reliable solution.
 
 ## Self-Healing Pipeline
 
@@ -311,6 +345,14 @@ Partially. The core update functionality (download, extract, install) works on a
 **Q: Why x86_64 only?**
 
 Beeper Desktop only provides x86_64 (64-bit Intel/AMD) builds. There are no ARM or 32-bit versions available from Beeper.
+
+**Q: Beeper shows a blank/white window on Hyprland/Sway?**
+
+This is an Electron + Wayland issue. Run `update-beeper --force` to reinstall with native Wayland support. The script automatically creates a desktop file override with the correct Ozone platform flags.
+
+**Q: I'm on X11, will Wayland flags break anything?**
+
+No. The script only applies Wayland configuration when `$WAYLAND_DISPLAY` is set. On X11, Beeper launches normally without any Wayland-specific flags.
 
 ## Contributing
 
