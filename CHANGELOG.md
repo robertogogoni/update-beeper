@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Creates desktop file override at `~/.local/share/applications/beeper.desktop`
   - Fixes blank/white window issues on Wayland without XWayland
 
+- **Sleep/wake stability fix** via `--disable-gpu-compositing` flag
+  - Prevents blank screen after screensaver, screen lock, or system sleep
+  - Included in Wayland flags by default
+
 - **System compatibility checks** run automatically before updates
   - Architecture verification (x86_64 required)
   - Distro detection (warns if not Arch-based, still works)

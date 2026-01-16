@@ -13,7 +13,8 @@ BEEPER_CONFIG="$HOME/.config/BeeperTexts"
 USER_DESKTOP_DIR="$HOME/.local/share/applications"
 
 # Wayland flags for native rendering (fixes blank windows on Hyprland/Sway)
-WAYLAND_FLAGS="--enable-features=UseOzonePlatform --ozone-platform=wayland"
+# --disable-gpu-compositing prevents blank screen after sleep/wake cycles
+WAYLAND_FLAGS="--enable-features=UseOzonePlatform --ozone-platform=wayland --disable-gpu-compositing"
 
 # Minimum expected AppImage size (Beeper is ~200MB)
 MIN_APPIMAGE_SIZE=150000000  # 150MB

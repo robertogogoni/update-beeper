@@ -225,10 +225,12 @@ Beeper uses Electron, which can have rendering issues on Wayland compositors. **
 
 When running on Wayland (detected via `$WAYLAND_DISPLAY`), this script automatically:
 
-1. **Tests startup with Wayland flags** - Uses `--enable-features=UseOzonePlatform --ozone-platform=wayland`
+1. **Tests startup with Wayland flags** - Uses `--enable-features=UseOzonePlatform --ozone-platform=wayland --disable-gpu-compositing`
 2. **Creates desktop file override** - Installs to `~/.local/share/applications/beeper.desktop`
 
-This ensures Beeper always launches with native Wayland rendering, fixing blank window issues.
+This ensures Beeper always launches with native Wayland rendering, fixing:
+- Blank/white windows on startup
+- Blank screen after sleep/wake/screensaver cycles
 
 ### Manual Fix (if needed)
 
@@ -381,6 +383,10 @@ Beeper Desktop only provides x86_64 (64-bit Intel/AMD) builds. There are no ARM 
 **Q: Beeper shows a blank/white window on Hyprland/Sway?**
 
 This is an Electron + Wayland issue. Run `update-beeper --force` to reinstall with native Wayland support. The script automatically creates a desktop file override with the correct Ozone platform flags.
+
+**Q: Beeper goes blank after sleep/wake or screensaver?**
+
+This is fixed by the `--disable-gpu-compositing` flag, which the script now includes automatically. Run `update-beeper --force` to update your desktop file with this fix.
 
 **Q: I'm on X11, will Wayland flags break anything?**
 
