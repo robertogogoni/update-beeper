@@ -4,6 +4,8 @@
 
 set -e
 
+SCRIPT_VERSION="1.1.0"
+LOCKFILE="/tmp/update-beeper.lock"
 BEEPER_API="https://api.beeper.com/desktop/download/linux/x64/stable/com.automattic.beeper.desktop"
 CHANGELOG_URL="https://www.beeper.com/changelog/desktop"
 INSTALL_DIR="/opt/beeper"
@@ -39,6 +41,8 @@ CHECK_ONLY=false
 NOTIFY=false
 FORCE=false
 SHOW_CHANGELOG=false
+QUIET=false
+DO_ROLLBACK=false
 SCRIPT_EXIT_CODE=0
 
 # Track which backup to use for rollback
@@ -52,6 +56,9 @@ usage() {
     echo "  --changelog, -l   Show changelog for installed version"
     echo "  --notify, -n      Send desktop notification (for cron/timer use)"
     echo "  --force, -f       Force update even if already on latest"
+    echo "  --quiet, -q       Quiet mode - only output on errors (for cron/systemd)"
+    echo "  --rollback, -r    Rollback to previous backup version"
+    echo "  --version, -v     Show script version"
     echo "  --help, -h        Show this help message"
     echo ""
     echo "Beeper will automatically restart after updating."
@@ -64,6 +71,11 @@ usage() {
     exit 0
 }
 
+show_version() {
+    echo "update-beeper $SCRIPT_VERSION"
+    exit 0
+}
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -71,6 +83,9 @@ while [[ $# -gt 0 ]]; do
         --changelog|-l) SHOW_CHANGELOG=true; shift ;;
         --notify|-n) NOTIFY=true; shift ;;
         --force|-f) FORCE=true; shift ;;
+        --quiet|-q) QUIET=true; shift ;;
+        --rollback|-r) DO_ROLLBACK=true; shift ;;
+        --version|-v) show_version ;;
         --help|-h) usage ;;
         *) echo "Unknown option: $1"; usage ;;
     esac
@@ -78,8 +93,44 @@ done
 
 cleanup() {
     rm -rf "$TMP_DIR" 2>/dev/null || true
+    release_lock
 }
 trap cleanup EXIT
+
+#──────────────────────────────────────────────────────────────────────────────
+# LOCKFILE MANAGEMENT
+#──────────────────────────────────────────────────────────────────────────────
+
+acquire_lock() {
+    # Use file descriptor 9 for the lock
+    exec 9>"$LOCKFILE"
+    if ! flock -n 9; then
+        local other_pid
+        other_pid=$(cat "$LOCKFILE" 2>/dev/null || echo "unknown")
+        echo -e "${RED}❌ Another update-beeper is already running (PID: $other_pid)${NC}"
+        exit 1
+    fi
+    echo $$ > "$LOCKFILE"
+}
+
+release_lock() {
+    flock -u 9 2>/dev/null || true
+    rm -f "$LOCKFILE" 2>/dev/null || true
+}
+
+#──────────────────────────────────────────────────────────────────────────────
+# OUTPUT HELPERS (for quiet mode)
+#──────────────────────────────────────────────────────────────────────────────
+
+# Print only if not in quiet mode
+log() {
+    [[ "$QUIET" != true ]] && echo -e "$@" || true
+}
+
+# Always print (errors)
+log_error() {
+    echo -e "$@" >&2
+}
 
 #──────────────────────────────────────────────────────────────────────────────
 # SYSTEM COMPATIBILITY CHECKS
@@ -256,11 +307,7 @@ verify_system_requirements() {
         fi
     done
 
-    # Check if another update is in progress
-    if [[ -d "$TMP_DIR" ]] && pgrep -f "update-beeper" | grep -v $$ >/dev/null 2>&1; then
-        echo -e "${RED}   ✗ Another update-beeper process may be running${NC}"
-        errors=$((errors + 1))
-    fi
+    # Note: Concurrent run detection is now handled by lockfile at startup
 
     # Check if Beeper is running (warn only)
     if pgrep -x "beepertexts" >/dev/null; then
@@ -872,6 +919,9 @@ perform_update() {
 # MAIN ENTRY POINT
 #──────────────────────────────────────────────────────────────────────────────
 
+# Acquire lock early (prevents concurrent runs)
+acquire_lock
+
 # Verify system compatibility first
 check_system_compatibility
 
@@ -881,12 +931,24 @@ if [[ "$SHOW_CHANGELOG" == true ]]; then
     exit $?
 fi
 
-echo -e "${BLUE}🔍 Checking versions...${NC}"
+# Handle manual rollback request
+if [[ "$DO_ROLLBACK" == true ]]; then
+    echo -e "${BLUE}🔄 Manual rollback requested...${NC}"
+    if rollback_to_backup; then
+        echo -e "${GREEN}✅ Rollback completed successfully!${NC}"
+        exit 0
+    else
+        echo -e "${RED}❌ Rollback failed!${NC}"
+        exit 1
+    fi
+fi
+
+log "${BLUE}🔍 Checking versions...${NC}"
 check_versions
 
-echo "   Installed: ${INSTALLED:-unknown}"
-echo "   Latest:    ${LATEST:-unknown}"
-echo "   AUR:       ${AUR:-unknown}"
+log "   Installed: ${INSTALLED:-unknown}"
+log "   Latest:    ${LATEST:-unknown}"
+log "   AUR:       ${AUR:-unknown}"
 
 # Validate we got version info
 if [[ -z "$LATEST" ]]; then
@@ -896,13 +958,13 @@ fi
 
 # Compare versions
 if [[ "$FORCE" != true ]] && version_gte "$INSTALLED" "$LATEST"; then
-    echo -e "${GREEN}✅ You're on the latest version!${NC}"
+    log "${GREEN}✅ You're on the latest version!${NC}"
     exit 0
 fi
 
 # Update available
-echo ""
-echo -e "${YELLOW}🔄 Update available: ${INSTALLED:-unknown} → $LATEST${NC}"
+log ""
+log "${YELLOW}🔄 Update available: ${INSTALLED:-unknown} → $LATEST${NC}"
 
 # Check-only mode
 if [[ "$CHECK_ONLY" == true ]]; then

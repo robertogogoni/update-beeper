@@ -121,6 +121,8 @@ Beeper crashed on startup. No warning during install. No automatic recovery. Thi
   │  📊 VERSION STATUS    Quick check with beeper-version          │
   │  ⏰ AUTO UPDATES      Systemd timer for set-and-forget         │
   │  🖥️  WAYLAND NATIVE   Auto-configures for Hyprland/Sway/etc    │
+  │  🔒 LOCKFILE          Prevents concurrent update runs          │
+  │  🤫 QUIET MODE        Silent operation for cron/systemd        │
   └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -183,6 +185,9 @@ update-beeper --check      # Check only, don't install
 update-beeper --changelog  # Open changelog for installed version
 update-beeper --force      # Force reinstall even if up to date
 update-beeper --notify     # Send desktop notification (for automation)
+update-beeper --quiet      # Silent mode (for cron/systemd)
+update-beeper --rollback   # Manually rollback to previous version
+update-beeper --version    # Show script version
 ```
 
 ### Options
@@ -193,6 +198,9 @@ update-beeper --notify     # Send desktop notification (for automation)
 | `--changelog` | `-l` | Show changelog for installed version |
 | `--notify` | `-n` | Send desktop notification (for cron/timer use) |
 | `--force` | `-f` | Force update even if already on latest |
+| `--quiet` | `-q` | Quiet mode - only output on errors (for cron/systemd) |
+| `--rollback` | `-r` | Rollback to previous backup version |
+| `--version` | `-v` | Show script version |
 | `--help` | `-h` | Show help message |
 
 ## Automatic Updates (Systemd)

@@ -5,9 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-01-24
 
 ### Added
+
+- **Lockfile-based concurrency protection** using `flock`
+  - Prevents multiple update-beeper instances from running simultaneously
+  - Shows PID of blocking process if lock already held
+  - Automatically released on exit (including crashes)
+
+- **New CLI options**
+  - `--quiet` / `-q`: Silent mode for cron/systemd (only outputs on errors)
+  - `--rollback` / `-r`: Manual rollback to previous backup version
+  - `--version` / `-v`: Show script version
 
 - **Wayland native rendering support** for Hyprland, Sway, and other Wayland compositors
   - Automatically detects Wayland via `$WAYLAND_DISPLAY`
@@ -25,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dependency check (curl, sudo required)
   - Optional dependency warning (notify-send)
 
+### Changed
+
+- Replaced process-grepping concurrent run detection with proper lockfile mechanism
+- Version output now uses `log()` helper for quiet mode support
+
 ### Fixed
 
 - **Directory leak in `backup_current()`** - Now uses subshell to prevent working directory changes from affecting the main script
@@ -32,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UX: "Configuring Wayland" message** - Only displays when actually on Wayland
 - Removed hardcoded username/UID from systemd service file
 - Scripts now work for any user without modification
+
+## [Unreleased]
+
+(No unreleased changes)
 
 ## [1.0.0] - 2026-01-16
 
@@ -78,4 +97,5 @@ The app downloads updates but can't overwrite pacman-managed files. This script
 downloads directly from Beeper's API, bypassing both the broken built-in updater
 and the often-outdated AUR package.
 
+[1.1.0]: https://github.com/robertogogoni/update-beeper/releases/tag/v1.1.0
 [1.0.0]: https://github.com/robertogogoni/update-beeper/releases/tag/v1.0.0
