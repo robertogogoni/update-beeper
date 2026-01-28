@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-27
+
+### Added
+
+- **Natural Language Commands** - Multiple ways to trigger updates conversationally
+  - Shell aliases: `bu`, `bv`, `beeper update`, `beeper version`
+  - Jarvis wrapper: `jarvis-beeper "update beeper"`, `jarvis-beeper "is beeper up to date"`
+  - Claude Code skill integration: Say "Update Beeper" or "I need to update Beeper"
+
+- **`--versions` flag** - Show all version info at a glance
+  - Displays installed, latest, and AUR versions in a clean table
+  - Shows update status and AUR lag indicator
+
+- **Health Monitoring** - Auto-recovery for the dreaded "blank screen" bug
+  - New `beeper-health` script detects unresponsive Beeper
+  - Checks if process is running but window is missing (blank screen symptom)
+  - Auto-restarts with XWayland mode if blank screen detected
+  - Systemd timer for 5-minute monitoring interval
+
+### Fixed
+
+- **Critical: Version detection bug** - Now uses `package.json` as source of truth
+  - Previously used `pacman -Q` which returns AUR version, not actual installed version
+  - This caused incorrect "up to date" reports when AUR was behind but direct install was current
+
+- **Arithmetic expansion crash** in `beeper-version` when versions are "unknown"
+  - Added validation guards before version comparisons
+  - Gracefully handles network failures and missing data
+
+- **AUR version extraction** - Fixed non-POSIX regex (`\d` → `[0-9]`)
+
+- **Curl timeout** - Added 10-second timeout to prevent hanging on network issues
+
 ## [1.1.0] - 2026-01-24
 
 ### Added
@@ -97,5 +130,6 @@ The app downloads updates but can't overwrite pacman-managed files. This script
 downloads directly from Beeper's API, bypassing both the broken built-in updater
 and the often-outdated AUR package.
 
+[1.2.0]: https://github.com/robertogogoni/update-beeper/releases/tag/v1.2.0
 [1.1.0]: https://github.com/robertogogoni/update-beeper/releases/tag/v1.1.0
 [1.0.0]: https://github.com/robertogogoni/update-beeper/releases/tag/v1.0.0

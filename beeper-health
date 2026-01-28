@@ -1,0 +1,30 @@
+#!/bin/bash
+# beeper-health - Monitor Beeper and restart if unresponsive
+
+BEEPER_WAYLAND=~/bin/beeper-wayland
+LOG_FILE=/tmp/beeper-health.log
+
+check_beeper_responsive() {
+    # Check if Beeper window exists and is mapped
+    if ! hyprctl clients -j | jq -e '.[] | select(.class | test("eeper"; "i"))' > /dev/null 2>&1; then
+        return 1  # No window found
+    fi
+    return 0
+}
+
+restart_beeper() {
+    echo "[$(date)] Restarting Beeper with XWayland mode..." >> "$LOG_FILE"
+    killall -9 beepertexts 2>/dev/null
+    sleep 2
+    nohup "$BEEPER_WAYLAND" > /dev/null 2>&1 &
+}
+
+# Main check
+if pgrep -x beepertexts > /dev/null; then
+    if ! check_beeper_responsive; then
+        echo "[$(date)] Beeper process running but no window - restarting" >> "$LOG_FILE"
+        restart_beeper
+    fi
+else
+    echo "[$(date)] Beeper not running" >> "$LOG_FILE"
+fi

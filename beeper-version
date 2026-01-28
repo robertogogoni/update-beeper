@@ -29,16 +29,17 @@ if [[ "$ARCH" != "x86_64" ]]; then
     echo -e "${YELLOW}Warning: Beeper only supports x86_64. Your arch: $ARCH${NC}"
 fi
 
-# Get installed version
+# Get installed version - check package.json FIRST (source of truth)
+# pacman may show AUR version which lags behind direct installs
 get_installed_version() {
     local version=""
 
-    # Try package.json first (most accurate)
+    # Try package.json first (most accurate - this is what's actually installed)
     if [[ -f "$INSTALL_DIR/resources/app/package.json" ]]; then
         version=$(grep -oP '"version":\s*"\K[0-9]+\.[0-9]+\.[0-9]+' "$INSTALL_DIR/resources/app/package.json" 2>/dev/null | head -1)
     fi
 
-    # Fallback to pacman
+    # Fallback to pacman only if package.json missing (fresh install scenario)
     if [[ -z "$version" ]]; then
         version=$(pacman -Q beeper-v4-bin 2>/dev/null | awk '{print $2}' | cut -d'-' -f1)
     fi
@@ -46,17 +47,26 @@ get_installed_version() {
     echo "${version:-not installed}"
 }
 
-# Get latest version from Beeper API
+# Get latest version from Beeper API (with 10s timeout to prevent hanging)
 get_latest_version() {
-    local download_url
-    download_url=$(curl -Ls -o /dev/null -w "%{url_effective}" "$BEEPER_API" 2>/dev/null)
-    echo "$download_url" | grep -oP 'Beeper-\K[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
+    local download_url version
+    download_url=$(curl -Ls -m 10 -o /dev/null -w "%{url_effective}" "$BEEPER_API" 2>/dev/null)
+    version=$(echo "$download_url" | grep -oP 'Beeper-\K[0-9]+\.[0-9]+\.[0-9]+')
+
+    # Fallback: try extracting any version pattern if redirect URL changed format
+    if [[ -z "$version" ]]; then
+        version=$(echo "$download_url" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    fi
+
+    echo "${version:-unknown}"
 }
 
-# Get AUR version
+# Get AUR version (with 10s timeout, using POSIX-compliant [0-9] instead of \d)
 get_aur_version() {
-    curl -sL "https://aur.archlinux.org/packages/beeper-v4-bin" 2>/dev/null | \
-        grep -oP '4\.\d+\.\d+' | head -1 || echo "unknown"
+    local version
+    version=$(curl -sL -m 10 "https://aur.archlinux.org/packages/beeper-v4-bin" 2>/dev/null | \
+              grep -oP '4\.[0-9]+\.[0-9]+' | head -1)
+    echo "${version:-unknown}"
 }
 
 # Version comparison: returns 0 if $1 >= $2
@@ -107,8 +117,11 @@ if [[ "$AUR" != "unknown" ]] && [[ "$LATEST" != "unknown" ]]; then
     if version_gte "$AUR" "$LATEST"; then
         echo -e "${GREEN}  ✓ AUR is up to date${NC}"
     else
-        BEHIND=$((${LATEST##*.} - ${AUR##*.}))
-        echo -e "${DIM}  ℹ AUR is behind by ~$BEHIND releases${NC}"
+        # Only calculate BEHIND if both are valid semver
+        if [[ "$AUR" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            BEHIND=$((${LATEST##*.} - ${AUR##*.}))
+            echo -e "${DIM}  ℹ AUR is behind by ~$BEHIND releases${NC}"
+        fi
     fi
 fi
 

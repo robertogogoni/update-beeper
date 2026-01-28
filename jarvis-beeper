@@ -1,0 +1,29 @@
+#!/bin/bash
+# jarvis-beeper - Natural language interface for Beeper management
+# Accepts phrases like "update beeper", "is beeper up to date", "beeper version"
+
+INPUT="${*,,}"  # Lowercase all input
+
+# Pattern matching for intent detection
+if [[ "$INPUT" =~ (update|upgrade).*(beeper) ]] || [[ "$INPUT" =~ (beeper).*(update|upgrade) ]]; then
+    echo "🤖 Updating Beeper..."
+    ~/bin/update-beeper
+
+elif [[ "$INPUT" =~ (version|status).*(beeper) ]] || [[ "$INPUT" =~ (beeper).*(version|status) ]]; then
+    ~/bin/beeper-version
+
+elif [[ "$INPUT" =~ (check).*(beeper) ]] || [[ "$INPUT" =~ (up.to.date) ]]; then
+    echo "🤖 Checking Beeper version..."
+    ~/bin/update-beeper --check
+
+elif [[ "$INPUT" =~ (rollback|revert).*(beeper) ]]; then
+    echo "🤖 Rolling back Beeper..."
+    ~/bin/update-beeper --rollback
+
+else
+    echo "🤖 I can help with Beeper! Try:"
+    echo "   'update beeper'     - Update to latest"
+    echo "   'beeper version'    - Show versions"
+    echo "   'check beeper'      - Check for updates"
+    echo "   'rollback beeper'   - Restore previous"
+fi

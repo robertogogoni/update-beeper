@@ -47,6 +47,32 @@
 
 A self-healing Beeper Desktop updater for Linux, built specifically for Arch Linux users.
 
+<details>
+<summary><b>🆕 What's New in v1.2</b> (click to expand)</summary>
+
+```
+    ·  ·    ·                                          ·    ·  ·
+         · 🐝  ·                                      ·  🐝 ·
+      ·        ·   NEW FEATURES HAVE LANDED!      ·        ·
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    🗣️  NATURAL LANGUAGE     Say "Update Beeper" - it just works!
+                             Shell aliases, Jarvis wrapper, Claude Code
+
+    🏥  HEALTH MONITORING    Auto-restarts Beeper on blank screen
+                             Systemd timer checks every 5 minutes
+
+    📊  --versions FLAG      See all versions at a glance:
+                             Installed • Latest • AUR
+
+    🐛  BUG FIXES            Version detection now uses package.json
+                             (source of truth) instead of pacman
+
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+</details>
+
 ## Why This Exists
 
 ### The Problem: Beeper's Built-in Updater Doesn't Work on Arch
@@ -115,10 +141,11 @@ Beeper crashed on startup. No warning during install. No automatic recovery. Thi
   │  🚀 DIRECT DOWNLOAD   Gets latest from Beeper API, skip AUR    │
   │  🔄 SELF-HEALING      Retries with targeted fixes              │
   │  ⏪ AUTO-ROLLBACK     Restores previous version on failure     │
-  │  🏥 HEALTH CHECKS     Verifies Beeper runs stable (10s)        │
+  │  🏥 HEALTH MONITOR    Auto-restarts on blank screen (NEW!)     │
+  │  🗣️  NATURAL LANGUAGE  "Update Beeper" just works (NEW!)       │
   │  🛫 PRE-FLIGHT        Validates permissions, space, network    │
   │  📦 AUR AWARE         Tells you when AUR catches up            │
-  │  📊 VERSION STATUS    Quick check with beeper-version          │
+  │  📊 VERSION STATUS    --versions shows all version info        │
   │  ⏰ AUTO UPDATES      Systemd timer for set-and-forget         │
   │  🖥️  WAYLAND NATIVE   Auto-configures for Hyprland/Sway/etc    │
   │  🔒 LOCKFILE          Prevents concurrent update runs          │
@@ -182,6 +209,7 @@ beeper-version
 ```bash
 update-beeper              # Check and install updates
 update-beeper --check      # Check only, don't install
+update-beeper --versions   # Show all versions (installed, latest, AUR)
 update-beeper --changelog  # Open changelog for installed version
 update-beeper --force      # Force reinstall even if up to date
 update-beeper --notify     # Send desktop notification (for automation)
@@ -199,6 +227,7 @@ update-beeper --version    # Show script version
 | `--notify` | `-n` | Send desktop notification (for cron/timer use) |
 | `--force` | `-f` | Force update even if already on latest |
 | `--quiet` | `-q` | Quiet mode - only output on errors (for cron/systemd) |
+| `--versions` | | Show all version info (installed, latest, AUR) |
 | `--rollback` | `-r` | Rollback to previous backup version |
 | `--version` | `-v` | Show script version |
 | `--help` | `-h` | Show help message |
@@ -224,6 +253,130 @@ systemctl --user list-timers update-beeper.timer
 ```
 
 The timer runs daily between 10:00-14:00 (randomized to avoid hammering Beeper's servers).
+
+## Natural Language Commands
+
+```
+    ╭───────────────────────────────────────────────────────────────╮
+    │                                                               │
+    │      "Update Beeper"         ───▶   🐝 Updating...           │
+    │      "Is Beeper up to date?" ───▶   🐝 Checking...           │
+    │      "Beeper version"        ───▶   🐝 v4.2.495              │
+    │      "Rollback Beeper"       ───▶   🐝 Restoring...          │
+    │                                                               │
+    │            ╱╲                                                  │
+    │           ╱  ╲     Talk to your updater like a human!        │
+    │          ╱ 🐝 ╲    Works with Claude Code, Bash, or Jarvis   │
+    │         ╱______╲                                              │
+    │                                                               │
+    ╰───────────────────────────────────────────────────────────────╯
+```
+
+### Shell Aliases (Bash/Zsh)
+
+Add to your `~/.bashrc` or `~/.zshrc`:
+
+```bash
+# Quick shortcuts
+alias bu='~/bin/update-beeper'
+alias bv='~/bin/beeper-version'
+
+# Natural language wrapper
+beeper() {
+    case "$1" in
+        update|upgrade) shift; ~/bin/update-beeper "$@" ;;
+        version|--version|-v) ~/bin/beeper-version ;;
+        *) echo "Usage: beeper {update|version}" ;;
+    esac
+}
+```
+
+Then use: `bu`, `bv`, `beeper update`, `beeper version`
+
+### Jarvis Wrapper (Natural Language CLI)
+
+```bash
+# Install the NL wrapper
+curl -o ~/bin/jarvis-beeper \
+  https://raw.githubusercontent.com/robertogogoni/update-beeper/main/jarvis-beeper
+chmod +x ~/bin/jarvis-beeper
+
+# Use natural language!
+jarvis-beeper "update beeper"
+jarvis-beeper "is beeper up to date"
+jarvis-beeper "what version of beeper do I have"
+jarvis-beeper "rollback beeper"
+```
+
+### Claude Code Integration
+
+The update-beeper skill auto-activates when you say things like:
+- "I need to update Beeper"
+- "Update Beeper to latest"
+- "Is Beeper up to date?"
+- "Check Beeper version"
+
+## Health Monitoring (Auto-Recovery)
+
+```
+    ┌─────────────────────────────────────────────────────────────┐
+    │                 🏥 BEEPER HEALTH MONITOR                    │
+    ├─────────────────────────────────────────────────────────────┤
+    │                                                             │
+    │   Every 5 minutes:                                          │
+    │                                                             │
+    │   ┌─────────┐     ┌──────────┐     ┌────────────┐          │
+    │   │ Process │────▶│  Window  │────▶│   Status   │          │
+    │   │ Running?│     │ Visible? │     │            │          │
+    │   └────┬────┘     └────┬─────┘     └────────────┘          │
+    │        │               │                                    │
+    │        │ NO            │ NO (blank screen!)                 │
+    │        ▼               ▼                                    │
+    │   [Log: not      [Auto-restart with                        │
+    │    running]       XWayland mode]                           │
+    │                                                             │
+    │   🔧 Fixes the dreaded "blank screen after sleep" bug      │
+    │                                                             │
+    └─────────────────────────────────────────────────────────────┘
+```
+
+### Install Health Monitor
+
+```bash
+# Download the health check script
+curl -o ~/bin/beeper-health \
+  https://raw.githubusercontent.com/robertogogoni/update-beeper/main/beeper-health
+chmod +x ~/bin/beeper-health
+
+# Install systemd timer (runs every 5 minutes)
+mkdir -p ~/.config/systemd/user
+
+cat > ~/.config/systemd/user/beeper-health.service << 'EOF'
+[Unit]
+Description=Check Beeper health and restart if unresponsive
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/beeper-health
+EOF
+
+cat > ~/.config/systemd/user/beeper-health.timer << 'EOF'
+[Unit]
+Description=Run Beeper health check every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl --user daemon-reload
+systemctl --user enable --now beeper-health.timer
+```
+
+Logs are written to `/tmp/beeper-health.log` when issues are detected.
 
 ## Wayland Support (Hyprland, Sway, etc.)
 

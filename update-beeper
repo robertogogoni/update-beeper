@@ -34,6 +34,8 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+DIM='\033[2m'
 NC='\033[0m'
 
 # Flags
@@ -44,6 +46,7 @@ SHOW_CHANGELOG=false
 QUIET=false
 DO_ROLLBACK=false
 SCRIPT_EXIT_CODE=0
+SHOW_VERSIONS=false
 
 # Track which backup to use for rollback
 ROLLBACK_BACKUP=""
@@ -57,6 +60,7 @@ usage() {
     echo "  --notify, -n      Send desktop notification (for cron/timer use)"
     echo "  --force, -f       Force update even if already on latest"
     echo "  --quiet, -q       Quiet mode - only output on errors (for cron/systemd)"
+echo "  --versions        Show all version info (installed, latest, AUR)"
     echo "  --rollback, -r    Rollback to previous backup version"
     echo "  --version, -v     Show script version"
     echo "  --help, -h        Show this help message"
@@ -84,6 +88,7 @@ while [[ $# -gt 0 ]]; do
         --notify|-n) NOTIFY=true; shift ;;
         --force|-f) FORCE=true; shift ;;
         --quiet|-q) QUIET=true; shift ;;
+        --versions) SHOW_VERSIONS=true; shift ;;
         --rollback|-r) DO_ROLLBACK=true; shift ;;
         --version|-v) show_version ;;
         --help|-h) usage ;;
@@ -237,21 +242,67 @@ show_changelog() {
 }
 
 check_versions() {
-    # Get installed version
-    INSTALLED=$(pacman -Q beeper-v4-bin 2>/dev/null | awk '{print $2}' | cut -d'-' -f1)
-
-    # Fallback: check package.json if pacman doesn't know
-    if [[ -z "$INSTALLED" ]] && [[ -f "$INSTALL_DIR/resources/app/package.json" ]]; then
+    # Get installed version - ALWAYS check package.json first (source of truth)
+    # pacman may show AUR version which lags behind direct installs
+    INSTALLED=""
+    if [[ -f "$INSTALL_DIR/resources/app/package.json" ]]; then
         INSTALLED=$(grep -oP '"version":\s*"\K[0-9]+\.[0-9]+\.[0-9]+' "$INSTALL_DIR/resources/app/package.json" | head -1)
     fi
 
-    # Get latest version from API
-    DOWNLOAD_URL=$(curl -Ls -o /dev/null -w "%{url_effective}" "$BEEPER_API")
+    # Fallback to pacman only if package.json missing (fresh install scenario)
+    if [[ -z "$INSTALLED" ]]; then
+        INSTALLED=$(pacman -Q beeper-v4-bin 2>/dev/null | awk '{print $2}' | cut -d'-' -f1)
+    fi
+
+    # Get latest version from API (with 10s timeout to prevent hanging)
+    # Sets globals: DOWNLOAD_URL, LATEST, AUR
+    DOWNLOAD_URL=$(curl -Ls -m 10 -o /dev/null -w "%{url_effective}" "$BEEPER_API" 2>/dev/null)
     LATEST=$(echo "$DOWNLOAD_URL" | grep -oP 'Beeper-\K[0-9]+\.[0-9]+\.[0-9]+')
 
-    # Get AUR version
-    AUR=$(curl -sL "https://aur.archlinux.org/packages/beeper-v4-bin" 2>/dev/null | \
-          grep -oP '4\.\d+\.\d+' | head -1)
+    # Validate LATEST extraction - if empty, API redirect may have failed
+    if [[ -z "$LATEST" ]]; then
+        # Try alternative: extract from any version pattern in URL
+        LATEST=$(echo "$DOWNLOAD_URL" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    fi
+    if [[ -z "$LATEST" ]]; then
+        LATEST="unknown"
+    fi
+
+    # Get AUR version (with 10s timeout, using POSIX-compliant [0-9] instead of \d)
+    AUR=$(curl -sL -m 10 "https://aur.archlinux.org/packages/beeper-v4-bin" 2>/dev/null | \
+          grep -oP '4\.[0-9]+\.[0-9]+' | head -1)
+    if [[ -z "$AUR" ]]; then
+        AUR="unknown"
+    fi
+}
+
+show_versions() {
+    check_versions
+
+    echo -e "${BLUE}🐝 Beeper Version Status${NC}"
+    echo "─────────────────────────────────────"
+    echo ""
+    echo -e "  Installed:  ${GREEN}${INSTALLED:-unknown}${NC}"
+    echo -e "  Latest:     ${CYAN}${LATEST:-unknown}${NC}"
+    echo -e "  AUR:        ${DIM}${AUR:-unknown}${NC}"
+    echo ""
+
+    if [[ -n "$INSTALLED" ]] && [[ "$INSTALLED" != "unknown" ]] && \
+       [[ -n "$LATEST" ]] && [[ "$LATEST" != "unknown" ]]; then
+        if version_gte "$INSTALLED" "$LATEST"; then
+            echo -e "  ${GREEN}✓ You're on the latest version!${NC}"
+        else
+            echo -e "  ${YELLOW}⚠ Update available: $INSTALLED → $LATEST${NC}"
+        fi
+    fi
+
+    if [[ -n "$AUR" ]] && [[ "$AUR" != "unknown" ]] && \
+       [[ -n "$LATEST" ]] && [[ "$LATEST" != "unknown" ]] && \
+       ! version_gte "$AUR" "$LATEST"; then
+        echo -e "  ${DIM}ℹ AUR is behind (update-beeper uses direct download)${NC}"
+    fi
+
+    exit 0
 }
 
 #──────────────────────────────────────────────────────────────────────────────
@@ -931,6 +982,11 @@ if [[ "$SHOW_CHANGELOG" == true ]]; then
     exit $?
 fi
 
+# Handle versions display (early exit)
+if [[ "$SHOW_VERSIONS" == true ]]; then
+    show_versions
+fi
+
 # Handle manual rollback request
 if [[ "$DO_ROLLBACK" == true ]]; then
     echo -e "${BLUE}🔄 Manual rollback requested...${NC}"
@@ -951,7 +1007,7 @@ log "   Latest:    ${LATEST:-unknown}"
 log "   AUR:       ${AUR:-unknown}"
 
 # Validate we got version info
-if [[ -z "$LATEST" ]]; then
+if [[ -z "$LATEST" || "$LATEST" == "unknown" ]]; then
     echo -e "${RED}❌ Could not determine latest version from Beeper API${NC}"
     exit 1
 fi
